@@ -300,6 +300,7 @@ defmodule Livebook.Session.Data do
       |> finish_cell_evaluation(cell, section)
       |> mark_dependent_cells_as_stale(cell)
       |> maybe_evaluate_queued()
+      |> set_dirty()
       |> wrap_ok()
     else
       _ -> :error

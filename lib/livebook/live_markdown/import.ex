@@ -15,12 +15,39 @@ defmodule Livebook.LiveMarkdown.Import do
 
     {ast, rewrite_messages} = rewrite_ast(ast)
 
+    ast =
+      ast
+      |> Enum.filter(fn {_, _, element_content, _} ->
+        with {:is_code, code} <- is_code?(element_content),
+             {:ok, true} <- is_output?(code) do
+          false
+        else
+          :not_code ->
+            true
+
+          {:ok, false} ->
+            true
+        end
+      end)
+
     notebook =
       ast
       |> group_elements()
       |> build_notebook()
 
     {notebook, earmark_messages ++ rewrite_messages}
+  end
+
+  defp is_code?([{_, _, [code | _], _}]) do
+    {:is_code, code}
+  end
+
+  defp is_code?(_) do
+    :not_code
+  end
+
+  defp is_output?(code_block) do
+    {:ok, code_block =~ "### OUTPUT"}
   end
 
   defp earmark_message_to_string({_severity, line_number, message}) do

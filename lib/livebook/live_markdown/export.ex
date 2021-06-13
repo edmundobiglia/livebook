@@ -39,10 +39,18 @@ defmodule Livebook.LiveMarkdown.Export do
 
   defp render_cell(%Cell.Elixir{} = cell) do
     code = get_elixir_cell_code(cell)
+    evaluated_code = get_elixir_cell_evaluated_code(cell)
+    normalized_code = strip_ansi_escape_sequences(evaluated_code)
 
     """
     ```elixir
     #{code}
+    ```\
+
+    ```elixir
+    ### OUTPUT
+
+    #{normalized_code}
     ```\
     """
     |> prepend_metadata(cell.metadata)
@@ -65,6 +73,16 @@ defmodule Livebook.LiveMarkdown.Export do
     do: source
 
   defp get_elixir_cell_code(%{source: source}), do: format_code(source)
+
+  defp get_elixir_cell_evaluated_code(%{outputs: outputs}), do: format_code(outputs[:text])
+
+  def strip_ansi_escape_sequences(string) when is_binary(string) do
+    regex = ~r/\e\[[0-9;]*m(?:\e\[K)?/
+
+    Regex.replace(regex, string, "")
+  end
+
+  def strip_ansi_escape_sequences(string), do: string
 
   defp render_metadata(metadata) do
     metadata_json = Jason.encode!(metadata)
