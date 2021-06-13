@@ -40,19 +40,8 @@ defmodule Livebook.LiveMarkdown.Export do
   defp render_cell(%Cell.Elixir{} = cell) do
     code = get_elixir_cell_code(cell)
     evaluated_code = get_elixir_cell_evaluated_code(cell)
-    normalized_code = strip_ansi_escape_sequences(evaluated_code)
 
-    """
-    ```elixir
-    #{code}
-    ```\
-
-    ```elixir
-    ### OUTPUT
-
-    #{normalized_code}
-    ```\
-    """
+    build_render_content(code, evaluated_code)
     |> prepend_metadata(cell.metadata)
   end
 
@@ -69,12 +58,42 @@ defmodule Livebook.LiveMarkdown.Export do
     |> prepend_metadata(cell.metadata)
   end
 
+  defp build_render_content(code, evaluated_code) when is_binary(evaluated_code) do
+    normalized_code = strip_ansi_escape_sequences(evaluated_code)
+
+    """
+    ```elixir
+    #{code}
+    ```\
+
+    ```elixir
+    ### OUTPUT
+
+    #{normalized_code}
+    ```\
+    """
+  end
+
+  defp build_render_content(code, _evaluated_code) do
+    """
+    ```elixir
+    #{code}
+    ```\
+    """
+  end
+
   defp get_elixir_cell_code(%{source: source, metadata: %{"disable_formatting" => true}}),
     do: source
 
   defp get_elixir_cell_code(%{source: source}), do: format_code(source)
 
-  defp get_elixir_cell_evaluated_code(%{outputs: outputs}), do: format_code(outputs[:text])
+  defp get_elixir_cell_evaluated_code(%{outputs: outputs}) do
+    if(outputs) do
+      format_code(outputs[:text])
+    else
+      nil
+    end
+  end
 
   def strip_ansi_escape_sequences(string) when is_binary(string) do
     regex = ~r/\e\[[0-9;]*m(?:\e\[K)?/
